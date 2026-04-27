@@ -11,7 +11,6 @@ jobs:
     name: App - Test, Build, Scan, and Push
     runs-on: ubuntu-latest
     
-    # Database service for integration tests
     services:
       mysql:
         image: mysql:8
@@ -26,7 +25,6 @@ jobs:
           --health-timeout=5s
           --health-retries=10
 
-    # Set default working directory for all steps in this job
     defaults:
       run:
         working-directory: app
@@ -44,11 +42,20 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      # ✅ LINTER
       - name: Run Checkstyle
         run: ./mvnw checkstyle:check
 
-      - name: Run tests and coverage
+      # ✅ TESTS + COVERAGE
+      - name: Run Tests + Coverage
         run: ./mvnw clean verify
+
+      # ✅ UPLOAD COVERAGE
+      - name: Upload JaCoCo Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: app/target/site/jacoco/
 
       - name: Build Docker image
         run: docker build -t music-app:ci .
@@ -75,7 +82,6 @@ jobs:
     needs: app-ci
     runs-on: ubuntu-latest
     
-    # Set working directory for Terraform files
     defaults:
       run:
         working-directory: infra/terraform-music
@@ -84,17 +90,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform fmt
-        run: terraform fmt -check -recursive
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Terraform init
-        run: terraform init -backend=false
+      - name: Terraform Init
+        run: terraform init
 
-      - name: Terraform validate
-        run: terraform validate
+      - name: Terraform Apply
+        env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+        run: terraform apply -auto-approve
 
   k8s-ci:
     name: Kubernetes - Helm validation
@@ -112,4 +124,3 @@ jobs:
 
       - name: Helm template
         run: helm template music-release k8s/music-chart
-
