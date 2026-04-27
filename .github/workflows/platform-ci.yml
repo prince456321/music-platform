@@ -8,7 +8,7 @@ on:
 
 jobs:
   app-ci:
-    name: App - Test, Build, Scan
+    name: App - Test, Build, Scan, and Push
     runs-on: ubuntu-latest
     
     # Database service for integration tests
@@ -62,6 +62,14 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
+      - name: Login to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
+      - name: Push Docker image to GHCR
+        run: |
+          docker tag music-app:ci ${{ vars.GHCR_IMAGE }}
+          docker push ${{ vars.GHCR_IMAGE }}
+
   infra-ci:
     name: Infra - Terraform validation
     needs: app-ci
@@ -104,3 +112,4 @@ jobs:
 
       - name: Helm template
         run: helm template music-release k8s/music-chart
+
