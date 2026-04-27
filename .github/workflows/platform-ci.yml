@@ -10,7 +10,23 @@ jobs:
   app-ci:
     name: App - Test, Build, Scan
     runs-on: ubuntu-latest
+    
+    # Database service for integration tests
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: jojo
+          MYSQL_DATABASE: movie_app
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pjojo"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
+    # Set default working directory for all steps in this job
     defaults:
       run:
         working-directory: app
@@ -38,7 +54,7 @@ jobs:
         run: docker build -t music-app:ci .
 
       - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@v0.24.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: music-app:ci
           format: table
@@ -49,7 +65,6 @@ jobs:
   k8s-ci:
     name: Kubernetes - Helm validation
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,11 +81,12 @@ jobs:
   infra-ci:
     name: Infra - Terraform validation
     runs-on: ubuntu-latest
-
+    
+    # Set working directory for Terraform files
     defaults:
       run:
         working-directory: infra/terraform-music
-
+        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
