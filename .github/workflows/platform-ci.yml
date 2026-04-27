@@ -62,24 +62,9 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-  k8s-ci:
-    name: Kubernetes - Helm validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-
-      - name: Helm lint
-        run: helm lint k8s/music-chart
-
-      - name: Helm template
-        run: helm template music-release k8s/music-chart
-
   infra-ci:
     name: Infra - Terraform validation
+    needs: app-ci
     runs-on: ubuntu-latest
     
     # Set working directory for Terraform files
@@ -102,3 +87,20 @@ jobs:
 
       - name: Terraform validate
         run: terraform validate
+
+  k8s-ci:
+    name: Kubernetes - Helm validation
+    needs: infra-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint k8s/music-chart
+
+      - name: Helm template
+        run: helm template music-release k8s/music-chart
