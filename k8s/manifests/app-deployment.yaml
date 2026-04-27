@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: music-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: music-app
+  template:
+    metadata:
+      labels:
+        app: music-app
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: music-app
+          image: ghcr.io/prince456321/music-app:v1
+          ports:
+            - containerPort: 8088
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql-db:3306/movie_app?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: jojo
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            httpGet:
+              path: /swagger-ui.html
+              port: 8088
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+
+          readinessProbe:
+            httpGet:
+              path: /swagger-ui.html
+              port: 8088
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /swagger-ui.html
+              port: 8088
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3

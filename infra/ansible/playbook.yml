@@ -1,0 +1,6 @@
+- name: Setup EC2 for Music App
+  hosts: music_app_server
+  become: true
+
+  roles:
+    - docker
