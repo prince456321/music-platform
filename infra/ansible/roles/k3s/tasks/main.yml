@@ -1,7 +1,7 @@
 ---
 # tasks file for k3s installation
 - name: Download and install k3s
-  shell: curl -sfL https://k3s.io | sh -
+  shell: curl -sfL https://get.k3s.io | sh -
   args:
     creates: /usr/local/bin/k3s
 
@@ -10,3 +10,4 @@
     name: k3s
     state: started
     enabled: yes
+
