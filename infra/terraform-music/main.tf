@@ -176,6 +176,15 @@ resource "aws_security_group" "sg_serveur_musique_app" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+ # Accès to l'API Kubernetes (K3s) for Helm
+  ingress {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] 
+  }
+
+
 
   egress {
     description = "All outbound"
