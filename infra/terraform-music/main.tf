@@ -257,6 +257,7 @@ resource "aws_instance" "serveur_musique_app" {
   associate_public_ip_address = true
   key_name                    = var.key_name
 
+  /*
   user_data = templatefile("${path.module}/user_data.sh", {
     app_port    = var.app_port
     db_endpoint = aws_db_instance.mysql.address
@@ -265,6 +266,8 @@ resource "aws_instance" "serveur_musique_app" {
     db_password = var.db_password
     ghcr_image  = var.ghcr_image
   })
+
+  */
 
   tags = merge(local.common_tags, {
     Name = "serveur-musique-app"
