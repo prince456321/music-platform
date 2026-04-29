@@ -119,7 +119,7 @@ jobs:
   # Configuration Management: Ansible Playbook Execution
   ansible:
     name: Configure EC2 with Ansible
-    needs: infra-ci
+    needs: [infra-ci]
     runs-on: ubuntu-latest
 
     steps:
@@ -155,14 +155,32 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: ansible-playbook -i inventory.ini playbook.yml
 
-  # Kubernetes CI: Helm Charts Validation
+      # ✅ New step: Extract and prepare kubeconfig for GitHub runner
+      - name: Fetch kubeconfig from EC2
+        run: |
+          ssh -i ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${{ needs.infra-ci.outputs.ec2_public_ip }} "sudo cat /etc/rancher/k3s/k3s.yaml" > k3s-config.tmp
+          sed "s/127.0.0.1/${{ needs.infra-ci.outputs.ec2_public_ip }}/g" k3s-config.tmp > k3s-config.yaml
+
+      # ✅ New step: Store kubeconfig to share it with the next job
+      - name: Upload kubeconfig as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubeconfig
+          path: k3s-config.yaml
+
+  # Kubernetes CI: Helm Deployment
   k8s-ci:
-    name: Kubernetes - Helm validation
-    needs: ansible
+    name: Kubernetes - Helm deployment
+    needs: [infra-ci, ansible]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download kubeconfig
+        uses: actions/download-artifact@v4
+        with:
+          name: kubeconfig
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -170,5 +188,13 @@ jobs:
       - name: Helm lint
         run: helm lint k8s/music-chart
 
-      - name: Helm template
-        run: helm template music-release k8s/music-chart
+      # ✅ Actual deployment using the fetched kubeconfig
+      - name: Deploy with Helm
+        env:
+          KUBECONFIG: ./k3s-config.yaml
+        run: |
+          helm upgrade --install music-release k8s/music-chart \
+            --set image.repository=${{ vars.GHCR_IMAGE }} \
+            --set image.tag=latest \
+            --wait --timeout 5m
+
